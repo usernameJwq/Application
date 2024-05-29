@@ -1,0 +1,18 @@
+---
+Language:      Cpp
+BasedOnStyle:  Google
+
+TabWidth: 4
+IndentWidth: 4
+ColumnLimit: 120
+
+IndentPPDirectives: AfterHash
+AccessModifierOffset: -4
+SpacesBeforeTrailingComments: 1 
+
+AllowShortBlocksOnASingleLine: Never
+BreakConstructorInitializers: BeforeComma
+BreakInheritanceList: BeforeComma
+SortIncludes: false
+...
+

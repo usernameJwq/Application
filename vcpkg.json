@@ -1,0 +1,15 @@
+{
+  "name": "libs",
+  "version": "1.0.0",
+  "dependencies": [
+    "fmt",
+    "spdlog",
+    "gtest",
+    "glfw3",
+    "boost-algorithm",
+    "ffmpeg",
+    "opencv4",
+    "glad"
+  ],
+  "overrides": []
+}
