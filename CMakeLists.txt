@@ -16,5 +16,6 @@ find_package(glad REQUIRED)
 
 add_subdirectory(apps)
 add_subdirectory(base)
+add_subdirectory(opengl)
 
 enable_testing()
