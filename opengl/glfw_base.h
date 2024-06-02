@@ -19,11 +19,16 @@ private:
     void init_glfw();
     bool init_glad();
     void create_window();
-    void program_attach_shader();
     void render();
 
 private:
+    // 彩色三角形
+    void bind_color_triangle_source();
+    void program_attach_color_shader();
+
+    // 纯色三角形
     void bind_triangle_source();
+    void program_attach_shader();
 
 private:
     static void frame_buffersize_callback(GLFWwindow* window, int width, int height);
