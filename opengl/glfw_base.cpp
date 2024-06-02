@@ -8,7 +8,7 @@ GlfwBase::GlfwBase()
 GlfwBase::~GlfwBase() { glfwTerminate(); }
 
 void GlfwBase::init_glfw() {
-    // glfw ³õÊ¼»¯ÅäÖÃ
+    // glfw åˆå§‹åŒ–
     glfwInit();
     glfwInitHint(GLFW_CONTEXT_VERSION_MAJOR, 3);
     glfwInitHint(GLFW_CONTEXT_VERSION_MINOR, 3);
@@ -25,7 +25,7 @@ bool GlfwBase::init_glad() {
 }
 
 void GlfwBase::create_window() {
-    // ´´½¨´°¿Ú£¬ÉèÖÃµ±Ç°ÎÄ±¾¶ÔÏó
+    // åˆ›å»ºçª—å£ï¼Œè®¾ç½®å½“å‰æ–‡æœ¬å¯¹è±¡
     window_ = glfwCreateWindow(window_width_, window_height_, window_title_.c_str(), NULL, NULL);
     if (!window_) {
         LOG::error("glfwCreateWindow failed");
@@ -48,15 +48,15 @@ void GlfwBase::bind_triangle_source() {
     glGenVertexArrays(1, &vao_);
     glBindVertexArray(vao_);
 
-    // °ó¶¨ vbo
+    // ç»‘å®š vbo
     glBindBuffer(GL_ARRAY_BUFFER, vbo);
     glBufferData(GL_ARRAY_BUFFER, sizeof(vertices), &vertices, GL_STATIC_DRAW);
     glEnableVertexAttribArray(0);
     glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 3 * sizeof(float), (void*)0);
-    // °ó¶¨ ebo
+    // ç»‘å®š ebo
     glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, ebo);
     glBufferData(GL_ELEMENT_ARRAY_BUFFER, sizeof(indexs), &indexs, GL_STATIC_DRAW);
-    // ½â°ó vao
+    // è§£ç»‘ vao
     glBindVertexArray(0);
 }
 
@@ -77,13 +77,13 @@ void GlfwBase::program_attach_shader() {
         "   FragColor = vec4(1.0f, 0.5f, 0.2f, 1.0f);\n"
         "}\0";
 
-    // ¶¥µã shader
+    // é¡¶ç‚¹ shader
     GLuint vertex_shader = -1;
     vertex_shader = glCreateShader(GL_VERTEX_SHADER);
     glShaderSource(vertex_shader, 1, &vertext_shader_source, NULL);
     glCompileShader(vertex_shader);
 
-    // Æ¬Ôª shader
+    // ç‰‡å…ƒ shader
     GLuint fragment_shader = -1;
     fragment_shader = glCreateShader(GL_FRAGMENT_SHADER);
     glShaderSource(fragment_shader, 1, &fragment_shader_source, NULL);
@@ -91,12 +91,12 @@ void GlfwBase::program_attach_shader() {
 
     program_ = glCreateProgram();
 
-    // program ¸½¼Ó shader
+    // program é™„åŠ  shader
     glAttachShader(program_, vertex_shader);
     glAttachShader(program_, fragment_shader);
     glLinkProgram(program_);
 
-    // É¾³ı shader
+    // åˆ é™¤ shader
     glDeleteShader(vertex_shader);
     glDeleteShader(fragment_shader);
 }
@@ -115,27 +115,38 @@ void GlfwBase::bind_color_triangle_source() {
     glGenVertexArrays(1, &vao_);
     glBindVertexArray(vao_);
 
-    // °ó¶¨ vbo
+    // ç»‘å®š vbo
     glBindBuffer(GL_ARRAY_BUFFER, vbo);
     glBufferData(GL_ARRAY_BUFFER, sizeof(vertices), &vertices, GL_STATIC_DRAW);
-    // ¶¥µãĞÅÏ¢
-    glEnableVertexAttribArray(0);
-    glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 6 * sizeof(float), (void*)0);
-    // ÑÕÉ«ĞÅÏ¢
-    glEnableVertexAttribArray(1);
-    glVertexAttribPointer(1, 3, GL_FLOAT, GL_FALSE, 6 * sizeof(float), (void*)(3 * sizeof(float)));
-    // °ó¶¨ ebo
+
+    // åŠ¨æ€è·å– pos_location ä¸‹æ ‡ 
+    GLuint pos_location = glGetAttribLocation(program_, "aPos");
+    glEnableVertexAttribArray(pos_location);
+    glVertexAttribPointer(pos_location, 3, GL_FLOAT, GL_FALSE, 6 * sizeof(float), (void*)0);
+
+    // åŠ¨æ€è·å– color_location ä¸‹æ ‡ 
+    GLuint color_location = glGetAttribLocation(program_, "aColor");
+    glEnableVertexAttribArray(color_location);
+    glVertexAttribPointer(color_location, 3, GL_FLOAT, GL_FALSE, 6 * sizeof(float), (void*)(3 * sizeof(float)));
+
+    // ç»‘å®š ebo
     glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, ebo);
     glBufferData(GL_ELEMENT_ARRAY_BUFFER, sizeof(indexs), &indexs, GL_STATIC_DRAW);
-    // ÊÍ·Å vao
+    // è§£ç»‘ vao
     glBindVertexArray(0);
 }
 
 void GlfwBase::program_attach_color_shader() {
     const char* vertext_shader_source =
         "#version 330 core\n"
-        "layout (location = 0) in vec3 aPos;\n"
-        "layout (location = 1) in vec3 aColor;\n"
+
+        //"layout (location = 0) in vec3 aPos;\n"
+        //"layout (location = 1) in vec3 aColor;\n"
+
+        // ä¸ä½¿ç”¨ layout (location = index) è·å–å‘é‡æ•°æ®
+        "in vec3 aPos;\n"
+        "in vec3 aColor;\n"
+
         "out vec3 color;\n"
         "void main()\n"
         "{\n"
@@ -152,25 +163,25 @@ void GlfwBase::program_attach_color_shader() {
         "   FragColor = vec4(color, 1.0f);\n"
         "}\0";
 
-    // ´´½¨ ¶¥µã shader
+    // åˆ›å»º é¡¶ç‚¹shader
     GLuint vertex_shader = -1;
     vertex_shader = glCreateShader(GL_VERTEX_SHADER);
     glShaderSource(vertex_shader, 1, &vertext_shader_source, NULL);
     glCompileShader(vertex_shader);
 
-    // ´´½¨ Æ¬Ôª shader
+    // åˆ›å»º ç‰‡å…ƒshader
     GLuint fragment_shader = -1;
     fragment_shader = glCreateShader(GL_FRAGMENT_SHADER);
     glShaderSource(fragment_shader, 1, &fragment_shader_source, NULL);
     glCompileShader(fragment_shader);
 
-    // ´´½¨ shader ±àÒëÆ÷
+    // é“¾æ¥ shaderç¼–è¯‘å™¨
     program_ = glCreateProgram();
     glAttachShader(program_, vertex_shader);
     glAttachShader(program_, fragment_shader);
     glLinkProgram(program_);
 
-    // É¾³ı shader
+    // åˆ é™¤ shader
     glDeleteShader(vertex_shader);
     glDeleteShader(fragment_shader);
 }
@@ -182,14 +193,14 @@ void GlfwBase::render() {
     glUseProgram(program_);
     glBindVertexArray(vao_);
 
-    // äÖÈ¾¶à±ßĞÎ
+    // æ¸²æŸ“å¤šè¾¹å½¢
     // glDrawArrays(GL_TRIANGLES, 0, 3);
 
     /*
-     * glDrawElements ²ÎÊı indices ËµÃ÷£º
-     *  Ê¹ÓÃ ebo Ä¬ÈÏÎª 0
-     *  Ê¹ÓÃ ebo ×îºóÒ»¸ö²ÎÊıÊÇÊı×Ö£¬±íÊ¾ ebo Æ«ÒÆÁ¿
-     *  Ê¹ÓÃ ebo ¿ÉÒÔ½« indexs Õû¸öÊı×é´«½øÈ¥
+     * glDrawElements å‚æ•° indices è¯´æ˜ï¼š
+     *  ä½¿ç”¨ ebo é»˜è®¤ä¸º 0
+     *  ä½¿ç”¨ ebo æœ€åä¸€ä¸ªå‚æ•°æ˜¯æ•°å­—ï¼Œè¡¨ç¤º ebo åç§»é‡
+     *  ä½¿ç”¨ ebo å¯ä»¥å°† indexs æ•´ä¸ªæ•°ç»„ä¼ è¿›å»
      */
     glDrawElements(GL_TRIANGLES, 3, GL_UNSIGNED_INT, (void*)(0));
 }
@@ -205,27 +216,27 @@ void GlfwBase::show_window() {
         return;
     }
 
-    // ÊÓ¿Ú´óĞ¡
+    // è§†å£å¤§å°
     glViewport(0, 0, window_width_, window_height_);
 
-    // ÉèÖÃ»Øµ÷ÊÂ¼ş
+    // è®¾ç½®å›è°ƒäº‹ä»¶
     glfwSetFramebufferSizeCallback(window_, frame_buffersize_callback);
     glfwSetKeyCallback(window_, key_callback);
 
-    // ´¿É«Èı½ÇĞÎ
+    // çº¯è‰²ä¸‰è§’å½¢
     // bind_triangle_source();
     // program_attach_shader();
 
-    // ²ÊÉ«Èı½ÇĞÎ
-    bind_color_triangle_source();
+    // å½©è‰²ä¸‰è§’å½¢
     program_attach_color_shader();
+    bind_color_triangle_source();
 
     while (!(glfwWindowShouldClose(window_))) {
-        // ÊÂ¼ş¼àÌı
+        // äº‹ä»¶ç›‘å¬
         glfwPollEvents();
-        // Í¼ĞÎäÖÈ¾
+        // å›¾å½¢æ¸²æŸ“
         render();
-        // ½»»»»º³å buffer
+        // äº¤æ¢ç¼“å†² buffer
         glfwSwapBuffers(window_);
     }
 

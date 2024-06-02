@@ -22,11 +22,11 @@ private:
     void render();
 
 private:
-    // ²ÊÉ«Èý½ÇÐÎ
+    // å½©è‰²ä¸‰è§’å½¢
     void bind_color_triangle_source();
     void program_attach_color_shader();
 
-    // ´¿É«Èý½ÇÐÎ
+    // çº¯è‰²ä¸‰è§’å½¢
     void bind_triangle_source();
     void program_attach_shader();
 
