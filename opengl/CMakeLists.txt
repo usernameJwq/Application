@@ -11,3 +11,6 @@ target_link_libraries(${PROJECT_NAME} PUBLIC
 	glad::glad
 	app_base
 )
+target_include_directories(${PROJECT_NAME} PRIVATE 
+	${Stb_INCLUDE_DIR}
+)
