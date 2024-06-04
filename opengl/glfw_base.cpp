@@ -119,12 +119,12 @@ void GlfwBase::bind_color_triangle_source() {
     glBindBuffer(GL_ARRAY_BUFFER, vbo);
     glBufferData(GL_ARRAY_BUFFER, sizeof(vertices), &vertices, GL_STATIC_DRAW);
 
-    // 动态获取 pos_location 下标 
+    // 动态获取 pos_location 下标
     GLuint pos_location = glGetAttribLocation(program_, "aPos");
     glEnableVertexAttribArray(pos_location);
     glVertexAttribPointer(pos_location, 3, GL_FLOAT, GL_FALSE, 6 * sizeof(float), (void*)0);
 
-    // 动态获取 color_location 下标 
+    // 动态获取 color_location 下标
     GLuint color_location = glGetAttribLocation(program_, "aColor");
     glEnableVertexAttribArray(color_location);
     glVertexAttribPointer(color_location, 3, GL_FLOAT, GL_FALSE, 6 * sizeof(float), (void*)(3 * sizeof(float)));

@@ -13,6 +13,7 @@ find_package(GTest REQUIRED)
 find_package(glfw3 REQUIRED)
 find_package(OpenCV REQUIRED)
 find_package(glad REQUIRED)
+find_package(Stb REQUIRED)
 
 add_subdirectory(apps)
 add_subdirectory(base)
