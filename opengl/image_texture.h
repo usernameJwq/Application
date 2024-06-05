@@ -14,7 +14,28 @@ public:
     ~ImageTexture();
 
 public:
-    void bind_image_texture(const std::string& img_path, GLuint& texture);
+    void show_window();
+
+private:
+    void init_glfw();
+    bool init_glad();
+    void create_window();
+    void render();
+
+private:
+    void bind_image_texture(const std::string& img_path);
+    void bind_pos_color_source();
+    void program_attach_shader();
+
+private:
+    GLFWwindow* window_;
+
+    std::string window_title_;
+    int window_width_;
+    int window_height_;
+
+    GLuint vao_;
+    GLuint program_;
 };
 
 #endif // !IMAGE_TEXTURE_H_
