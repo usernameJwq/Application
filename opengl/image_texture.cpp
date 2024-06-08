@@ -53,17 +53,43 @@ void ImageTexture::bind_image_texture(const std::string& img_path) {
     glGenTextures(1, &texture);
     glActiveTexture(GL_TEXTURE0);
     glBindTexture(GL_TEXTURE_2D, texture);
+
+    // 自动设置层级关系
+    glGenerateMipmap(GL_TEXTURE_2D);
+
     // 传输纹理数据
     glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, width, height, 0, GL_RGBA, GL_UNSIGNED_BYTE, data);
+
+    // 手动设置 Minmap 层级渐变
+    // int s_width = width;
+    // int s_height = height;
+    // int level = 0;
+    // while (true) {
+    //    if (s_width <= 1 || s_height <= 1) {
+    //        break;
+    //    }
+
+    //    glTexImage2D(GL_TEXTURE_2D, level, GL_RGBA, s_width, s_height, 0, GL_RGBA, GL_UNSIGNED_BYTE, data);
+    //    s_width = s_width < 1 ? 1 : s_width / 2;
+    //    s_height = s_height < 1 ? 1 : s_height / 2;
+    //    level++;
+    //}
 
     // 释放 img 空间
     stbi_image_free(data);
 
     // 纹理过滤:
-    // 渲染像素 > 采样像素(图片像素) Linear
-    // 渲染像素 < 采样像素(图片像素) Nearest
+    // 渲染像素 > 采样像素(图片像素) Linear 线性差值
+    // 渲染像素 < 采样像素(图片像素) Nearest 临近采样
+    // glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+    // glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
+
+    // Minmap 过滤
+    // GL_NEAREST_MIPMAP_LINEAR 说明：
+    //  GL_NEAREST 单张图片之间的采样方式
+    //  MIPMAP_LINEAR 层级之间的采样方式
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
-    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST_MIPMAP_LINEAR);
 
     // 纹理包裹方式
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_REPEAT); // u
@@ -129,11 +155,23 @@ void ImageTexture::program_attach_shader() {
         "uniform float time;\n"
         "void main()\n"
         "{\n"
-        "   gl_Position = vec4(aPos, 1.0f);\n"
-        "   color = aColor;\n"
-        //"   uv = aUV;\n"
-        "   float delta = time * 0.3;\n"
-        "   uv = vec2(aUV.x + delta, aUV.y);\n" // 轮播效果
+
+        // 正常坐标播放
+        //"   gl_Position = vec4(aPos, 1.0f);\n"
+        //"   color = aColor;\n"
+
+        // Minmap 比例播放, 改变坐标大小
+        "   float scale = 1.0 / time;\n"
+        "   vec3 sPos = aPos * scale;\n"
+        "   gl_Position = vec4(sPos, 1.0f);\n"
+
+        // 正常显示 UV
+        "   uv = aUV;\n"
+
+        // 轮播效果
+        //"   float delta = time * 0.3;\n"
+        //"   uv = vec2(aUV.x + delta, aUV.y);\n"
+
         "}\0";
 
     const char* fragment_shader_source =
@@ -196,6 +234,9 @@ void ImageTexture::show_window() {
     // 视口大小
     glViewport(0, 0, window_width_, window_height_);
 
+    // 函数回调
+    glfwSetFramebufferSizeCallback(window_, frame_buffersize_callback);
+
     program_attach_shader();
     bind_pos_color_source();
     bind_image_texture("F:/Qt_Cpp/cmake_pro/Application/assets/imgs/goku.png");
@@ -210,4 +251,9 @@ void ImageTexture::show_window() {
     }
 
     glfwTerminate();
+}
+
+void ImageTexture::frame_buffersize_callback(GLFWwindow* window, int width, int height) {
+    glViewport(0, 0, width, height);
+    glfwSwapBuffers(window);
 }
