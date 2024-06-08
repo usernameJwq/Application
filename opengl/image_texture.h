@@ -23,6 +23,9 @@ private:
     void render();
 
 private:
+    static void frame_buffersize_callback(GLFWwindow* window, int width, int height);
+
+private:
     void bind_image_texture(const std::string& img_path);
     void bind_pos_color_source();
     void program_attach_shader();
