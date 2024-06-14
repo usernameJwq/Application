@@ -3,6 +3,7 @@
 #include "../base/log.h"
 #include "../opengl/glfw_base.h"
 #include "../opengl/image_texture.h"
+#include "../ffmpeg/ffmpeg_base.h"
 
 #define APP_VERSION "1.0.0"
 
@@ -13,8 +14,10 @@ int main() {
     // GlfwBase glfw_base;
     // glfw_base.show_window();
 
-    ImageTexture img_texture;
-    img_texture.show_window();
+    // ImageTexture img_texture;
+    // img_texture.show_window();
+
+    FFmpegBase ffmpeg_base;
 
     return 0;
 }
