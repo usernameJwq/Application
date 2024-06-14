@@ -14,10 +14,12 @@ find_package(glfw3 REQUIRED)
 find_package(OpenCV REQUIRED)
 find_package(glad REQUIRED)
 find_package(Stb REQUIRED)
+find_package(FFMPEG REQUIRED)
 
 add_subdirectory(apps)
 add_subdirectory(base)
 add_subdirectory(opengl)
 add_subdirectory(leetcode)
+add_subdirectory(ffmpeg)
 
 enable_testing()
