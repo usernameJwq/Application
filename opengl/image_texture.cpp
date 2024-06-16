@@ -1,11 +1,19 @@
 #include "image_texture.h"
 
 #include "stb_image.h"
+#include "glm/gtc/matrix_transform.hpp"
+#include "glm/gtc/type_ptr.hpp"
 
 #include "../base/log.h"
 
 ImageTexture::ImageTexture()
-    : window_(nullptr), window_title_("Glfw Window"), window_width_(600), window_height_(400), vao_(-1), program_(-1) {}
+    : window_(nullptr)
+    , window_title_("Glfw Window")
+    , window_width_(600)
+    , window_height_(400)
+    , trans_mat_(glm::mat4(1.0f))
+    , vao_(-1)
+    , program_(-1) {}
 
 ImageTexture::~ImageTexture() {}
 
@@ -81,15 +89,15 @@ void ImageTexture::bind_image_texture(const std::string& img_path) {
     // 纹理过滤:
     // 渲染像素 > 采样像素(图片像素) Linear 线性差值
     // 渲染像素 < 采样像素(图片像素) Nearest 临近采样
-    // glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
-    // glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
 
     // Minmap 过滤
     // GL_NEAREST_MIPMAP_LINEAR 说明：
     //  GL_NEAREST 单张图片之间的采样方式
     //  MIPMAP_LINEAR 层级之间的采样方式
-    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
-    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST_MIPMAP_LINEAR);
+    // glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+    // glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST_MIPMAP_LINEAR);
 
     // 纹理包裹方式
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_REPEAT); // u
@@ -153,17 +161,18 @@ void ImageTexture::program_attach_shader() {
         "out vec3 color;\n"
         "out vec2 uv;\n"
         "uniform float time;\n"
+        "uniform mat4 transFormMat;\n"
         "void main()\n"
         "{\n"
 
         // 正常坐标播放
-        //"   gl_Position = vec4(aPos, 1.0f);\n"
-        //"   color = aColor;\n"
+        "   gl_Position = vec4(aPos, 1.0f) * transFormMat;\n"
+        "   color = aColor;\n"
 
         // Minmap 比例播放, 改变坐标大小
-        "   float scale = 1.0 / time;\n"
-        "   vec3 sPos = aPos * scale;\n"
-        "   gl_Position = vec4(sPos, 1.0f);\n"
+        //"   float scale = 1.0 / time;\n"
+        //"   vec3 sPos = aPos * scale;\n"
+        //"   gl_Position = vec4(sPos, 1.0f);\n"
 
         // 正常显示 UV
         "   uv = aUV;\n"
@@ -204,6 +213,18 @@ void ImageTexture::program_attach_shader() {
     glDeleteShader(fragment_shader);
 }
 
+// 对显示的纹理进行旋转、缩放等变换
+void ImageTexture::transform_position() {
+    // 平移
+    trans_mat_ = glm::translate(trans_mat_, glm::vec3(1.0f, 1.0f, 1.0f));
+
+    // 旋转
+    trans_mat_ = glm::rotate(trans_mat_, 90.0f, glm::vec3(0.0f, 0.0f, 1.0f));
+
+    // 缩放
+    trans_mat_ = glm::scale(trans_mat_, glm::vec3(0.5f, 0.5f, 0.5f));
+}
+
 void ImageTexture::render() {
     glClearColor(0.2f, 0.3f, 0.3f, 1.0f);
     glClear(GL_COLOR_BUFFER_BIT);
@@ -213,6 +234,9 @@ void ImageTexture::render() {
 
     GLuint time_location = glGetUniformLocation(program_, "time");
     glUniform1f(time_location, glfwGetTime());
+
+    GLuint trans_location = glGetUniformLocation(program_, "transFormMat");
+    glUniformMatrix4fv(trans_location, 1, GL_FALSE, glm::value_ptr(trans_mat_));
 
     glUseProgram(program_);
     glBindVertexArray(vao_);
@@ -240,6 +264,7 @@ void ImageTexture::show_window() {
     program_attach_shader();
     bind_pos_color_source();
     bind_image_texture("F:/Qt_Cpp/cmake_pro/Application/assets/imgs/goku.png");
+    transform_position();
 
     while (!(glfwWindowShouldClose(window_))) {
         // 事件监听

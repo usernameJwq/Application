@@ -7,6 +7,7 @@
 
 #include "glad/glad.h"
 #include "GLFW/glfw3.h"
+#include "glm/glm.hpp"
 
 class ImageTexture {
 public:
@@ -29,6 +30,7 @@ private:
     void bind_image_texture(const std::string& img_path);
     void bind_pos_color_source();
     void program_attach_shader();
+    void transform_position();
 
 private:
     GLFWwindow* window_;
@@ -36,6 +38,8 @@ private:
     std::string window_title_;
     int window_width_;
     int window_height_;
+
+    glm::mat4 trans_mat_;
 
     GLuint vao_;
     GLuint program_;
