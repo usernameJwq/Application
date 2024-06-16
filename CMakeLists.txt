@@ -15,6 +15,7 @@ find_package(OpenCV REQUIRED)
 find_package(glad REQUIRED)
 find_package(Stb REQUIRED)
 find_package(FFMPEG REQUIRED)
+find_package(glm REQUIRED)
 
 add_subdirectory(apps)
 add_subdirectory(base)

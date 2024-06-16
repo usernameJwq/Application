@@ -10,7 +10,8 @@
     "ffmpeg",
     "opencv4",
     "glad",
-    "stb"
+    "stb",
+    "glm"
   ],
   "overrides": []
 }
