@@ -66,11 +66,16 @@ void LinkList::push_one(std::vector<int>& nums, const int& digit) {
  * 格雷编码
  *
  * 步骤:
+ *  1.格雷码有几位，总数就是 2^n 个
  *
- * 时间复杂度:
- * 空间复杂度:
+ * 时间复杂度: O(2^n)
+ * 空间复杂度: O(1)
  */
 std::vector<int> LinkList::graycode(const int& n) {
     std::vector<int> gray_array;
+    const int size = 1 << n;
+    for (int i = 0; i < size; i++) {
+        gray_array.push_back(i ^ (i >> 1));
+    }
     return gray_array;
 }
