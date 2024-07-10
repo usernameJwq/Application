@@ -22,5 +22,3 @@ add_subdirectory(base)
 add_subdirectory(opengl)
 add_subdirectory(leetcode)
 add_subdirectory(ffmpeg)
-
-enable_testing()
