@@ -1,11 +1,11 @@
 project(app_opengl)
 
-file(GLOB_RECURSE SOURCE_FILES
+file(GLOB SOURCE_FILES
 	${CMAKE_CURRENT_SOURCE_DIR}/*.cpp
 	${CMAKE_CURRENT_SOURCE_DIR}/*.h
 )
 
-add_library(${PROJECT_NAME} STATIC ${SOURCE_FILES} "glfw_cube.cpp" "glfw_cube.h")
+add_library(${PROJECT_NAME} STATIC ${SOURCE_FILES})
 target_link_libraries(${PROJECT_NAME} PUBLIC
 	glfw
 	glad::glad
