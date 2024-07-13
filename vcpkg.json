@@ -11,7 +11,8 @@
     "opencv4",
     "glad",
     "stb",
-    "glm"
+    "glm",
+    "sdl2"
   ],
   "overrides": []
 }
