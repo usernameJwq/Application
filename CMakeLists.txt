@@ -16,6 +16,7 @@ find_package(glad REQUIRED)
 find_package(Stb REQUIRED)
 find_package(FFMPEG REQUIRED)
 find_package(glm REQUIRED)
+find_package(SDL2 REQUIRED)
 
 add_subdirectory(apps)
 add_subdirectory(base)

@@ -14,6 +14,7 @@ target_link_directories(${PROJECT_NAME} PUBLIC
 )
 target_link_libraries(${PROJECT_NAME} PUBLIC
 	${FFMPEG_LIBRARIES}
+	fmt::fmt
 )
 
 add_subdirectory(test)
