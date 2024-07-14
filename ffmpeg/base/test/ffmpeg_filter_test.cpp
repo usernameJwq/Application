@@ -13,7 +13,7 @@ protected:
 
 TEST_F(FFmpegFilterTest, ffmpeg_filter) {
     std::string filename = "F:/Qt_Cpp/road123.mp4";
-    std::string desc = "MaoBuYi";
+    std::string desc = "fps=25";
     // TODO: 添加滤镜描述时错误
     // ffmpeg_filter_->open_filter_file(filename, desc);
 }

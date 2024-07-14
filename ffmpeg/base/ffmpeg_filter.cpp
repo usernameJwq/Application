@@ -95,9 +95,10 @@ void FFmpegFilter::add_video_filter(const AVCodecContext* video_context, const A
     }
 
     // 滤镜信息
-    std::string filter_graph_desc =
-        fmt::format("video_size={}x{}:pix_fmt={}:time_base={}/{}:pixel_aspect={}/{}", video_context_->width,
-                    video_context_->height, (int)AV_PIX_FMT_YUV420P, 1, 25, 1, 1);
+    std::string filter_graph_desc = fmt::format(
+        "video_size={}x{}:pix_fmt={}:time_base={}/{}:pixel_aspect={}/{}", video_context->width, video_context->height,
+        (int)video_context->pix_fmt, video_stream->time_base.num, video_stream->time_base.den,
+        video_stream->sample_aspect_ratio.num, video_stream->sample_aspect_ratio.den);
 
     // 创建滤镜实例
     ret = avfilter_graph_create_filter(&buffer_context_, buffer_filter, "in", filter_graph_desc.c_str(), NULL,
