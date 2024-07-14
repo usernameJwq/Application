@@ -16,11 +16,16 @@ public:
 
 public:
     void file_demuxer(const std::string& filename);
+    void extract_yuv(const std::string& filename);
+
+private:
+    void open_file(const std::string& filename);
     void open_decoder_context(const AVFormatContext* avformat_context, const AVStream* stream);
+    void decoder_video(AVCodecContext* video_context, const AVPacket* packet);
+    void save_yuv(const AVFrame* frame);
 
 private:
     AVFormatContext* avformat_context_;
-
     AVCodecContext* video_context_;
     AVCodecContext* audio_context_;
 
