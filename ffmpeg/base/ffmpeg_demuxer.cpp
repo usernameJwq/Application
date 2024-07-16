@@ -2,6 +2,8 @@
 
 #include <fstream>
 
+#include "fmt/format.h"
+
 FFmpegDemuxer::FFmpegDemuxer()
     : avformat_context_(nullptr)
     , video_context_(nullptr)
@@ -39,6 +41,46 @@ void FFmpegDemuxer::extract_yuv(const std::string& filename) {
         av_packet_unref(packet);
     }
     av_packet_free(&packet);
+}
+
+void FFmpegDemuxer::generate_jpeg(const std::string& filename) {
+    open_file(filename);
+    open_decoder_context(avformat_context_, avformat_context_->streams[video_index_]);
+
+    int jpeg_index = 1;
+    AVPacket* packet = av_packet_alloc();
+
+    while (av_read_frame(avformat_context_, packet) >= 0) {
+        if (packet->stream_index == video_index_) {
+            int ret = -1;
+
+            ret = avcodec_send_packet(video_context_, packet);
+            if (ret == AVERROR(EAGAIN) || ret == AVERROR_EOF) {
+                break;
+            }
+
+            if (ret < 0) {
+                break;
+            }
+
+            AVFrame* frame = av_frame_alloc();
+            while (ret == 0) {
+                ret = avcodec_receive_frame(video_context_, frame);
+                if (ret == 0) {
+                    save_jpeg(frame, jpeg_index);
+                    jpeg_index++;
+                }
+                av_frame_unref(frame);
+            }
+            if (frame) {
+                av_frame_free(&frame);
+            }
+        }
+        av_packet_unref(packet);
+    }
+    if (packet) {
+        av_packet_free(&packet);
+    }
 }
 
 void FFmpegDemuxer::open_file(const std::string& filename) {
@@ -176,4 +218,124 @@ void FFmpegDemuxer::save_yuv(const AVFrame* frame) {
     }
     ofs.flush();
     ofs.close();
+}
+
+void FFmpegDemuxer::save_jpeg(const AVFrame* frame, const int& jpeg_index) {
+    if (jpeg_index % 300 != 0) {
+        return;
+    }
+
+    if (!frame) {
+        av_log(NULL, AV_LOG_ERROR, "save_jpeg frame is null\n");
+        return;
+    }
+
+    // 像素格式转换
+    SwsContext* sws_context = sws_getContext(frame->width, frame->height, (AVPixelFormat)frame->format, frame->width,
+                                             frame->height, AV_PIX_FMT_YUVJ420P, SWS_FAST_BILINEAR, NULL, NULL, NULL);
+
+    AVFrame* j420p_frame = av_frame_alloc();
+    j420p_frame->format = frame->format;
+    j420p_frame->width = frame->width;
+    j420p_frame->height = frame->height;
+
+    // 申请转换后的frame存储空间
+    int size =
+        av_image_alloc(j420p_frame->data, j420p_frame->linesize, frame->width, frame->height, AV_PIX_FMT_YUVJ420P, 1);
+    if (size <= 0) {
+        av_log(NULL, AV_LOG_ERROR, "av_image_alloc failed\n");
+        return;
+    }
+
+    int scale_height = sws_scale(sws_context, frame->data, frame->linesize, 0, frame->height, j420p_frame->data,
+                                 j420p_frame->linesize);
+    if (scale_height <= 0) {
+        av_log(NULL, AV_LOG_ERROR, "sws_scale failed\n");
+        return;
+    }
+
+    if (sws_context) {
+        sws_freeContext(sws_context);
+    }
+
+    int ret = 0;
+    AVFormatContext* jpeg_format_context = nullptr;
+
+    std::string jpeg_name = fmt::format("jpeg_test/road_{}.jpeg", jpeg_index);
+
+    ret = avformat_alloc_output_context2(&jpeg_format_context, NULL, NULL, jpeg_name.c_str());
+    if (ret < 0) {
+        av_log(NULL, AV_LOG_ERROR, "avformat_alloc_output_context2 failed\n");
+        return;
+    }
+
+    // 打开编码器
+    const AVCodec* encoder = avcodec_find_encoder(AV_CODEC_ID_MJPEG);
+    if (!encoder) {
+        av_log(NULL, AV_LOG_ERROR, "avcodec_find_encoder AV_CODEC_ID_MJPEG failed\n");
+        return;
+    }
+
+    AVCodecContext* jpeg_codec_context = avcodec_alloc_context3(encoder);
+    if (!jpeg_codec_context) {
+        av_log(NULL, AV_LOG_ERROR, "avcodec_alloc_context3 failed\n");
+        return;
+    }
+    jpeg_codec_context->width = frame->width;
+    jpeg_codec_context->height = frame->height;
+    jpeg_codec_context->pix_fmt = AV_PIX_FMT_YUVJ420P;
+    jpeg_codec_context->time_base = {1, 25};
+
+    ret = avcodec_open2(jpeg_codec_context, NULL, NULL);
+    if (ret != 0) {
+        av_log(NULL, AV_LOG_ERROR, "avcodec_open2 failed\n");
+        return;
+    }
+
+    AVStream* video_stream = avformat_new_stream(jpeg_format_context, NULL);
+    if (!video_stream) {
+        av_log(NULL, AV_LOG_ERROR, "avformat_new_stream failed\n");
+        return;
+    }
+
+    ret = avformat_write_header(jpeg_format_context, NULL);
+    if (ret < 0) {
+        av_log(NULL, AV_LOG_ERROR, "avformat_write_header failed\n");
+        return;
+    }
+
+    AVPacket* packet = av_packet_alloc();
+    while (avcodec_send_frame(jpeg_codec_context, j420p_frame) >= 0) {
+        ret = avcodec_receive_packet(jpeg_codec_context, packet);
+        if (ret == AVERROR(EAGAIN) || ret == AVERROR_EOF) {
+            break;
+        }
+
+        if (ret < 0) {
+            break;
+        }
+
+        av_write_frame(jpeg_format_context, packet);
+        av_frame_unref(j420p_frame);
+        av_packet_unref(packet);
+    }
+
+    if (j420p_frame) {
+        av_frame_free(&j420p_frame);
+    }
+
+    if (packet) {
+        av_packet_free(&packet);
+    }
+
+    av_write_trailer(jpeg_format_context);
+
+    if (jpeg_format_context) {
+        avformat_free_context(jpeg_format_context);
+    }
+
+    if (jpeg_codec_context) {
+        avcodec_close(jpeg_codec_context);
+        avcodec_free_context(&jpeg_codec_context);
+    }
 }
