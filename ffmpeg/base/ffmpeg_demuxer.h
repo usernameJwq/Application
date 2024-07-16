@@ -7,6 +7,8 @@ extern "C" {
 #include "libavformat/avformat.h"
 #include "libavcodec/avcodec.h"
 #include "libavutil/avutil.h"
+#include "libswscale/swscale.h"
+#include "libavutil/imgutils.h"
 }
 
 class FFmpegDemuxer {
@@ -17,12 +19,14 @@ public:
 public:
     void file_demuxer(const std::string& filename);
     void extract_yuv(const std::string& filename);
+    void generate_jpeg(const std::string& filename);
 
 private:
     void open_file(const std::string& filename);
     void open_decoder_context(const AVFormatContext* avformat_context, const AVStream* stream);
     void decoder_video(AVCodecContext* video_context, const AVPacket* packet);
     void save_yuv(const AVFrame* frame);
+    void save_jpeg(const AVFrame* frame, const int& jpeg_index);
 
 private:
     AVFormatContext* avformat_context_;
