@@ -8,6 +8,7 @@ extern "C" {
 #include "libavcodec/avcodec.h"
 #include "libavutil/avutil.h"
 #include "libswscale/swscale.h"
+#include "libswresample/swresample.h"
 #include "libavutil/imgutils.h"
 }
 
@@ -20,6 +21,8 @@ public:
     void file_demuxer(const std::string& filename);
     void extract_yuv(const std::string& filename);
     void generate_jpeg(const std::string& filename);
+    void generate_gif(const std::string& filename);
+    void save_pcm_date(const std::string& filename);
 
 private:
     void open_file(const std::string& filename);
@@ -27,6 +30,8 @@ private:
     void decoder_video(AVCodecContext* video_context, const AVPacket* packet);
     void save_yuv(const AVFrame* frame);
     void save_jpeg(const AVFrame* frame, const int& jpeg_index);
+    void save_gif(const AVFrame* frame, const int& gif_index);
+    void save_pcm(const AVFrame* frame);
 
 private:
     AVFormatContext* avformat_context_;
