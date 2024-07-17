@@ -83,6 +83,95 @@ void FFmpegDemuxer::generate_jpeg(const std::string& filename) {
     }
 }
 
+void FFmpegDemuxer::generate_gif(const std::string& filename) {
+    open_file(filename);
+    open_decoder_context(avformat_context_, avformat_context_->streams[video_index_]);
+
+    int ret = -1;
+    int packet_index = 0;
+    AVPacket* packet = av_packet_alloc();
+
+    while (av_read_frame(avformat_context_, packet) >= 0) {
+        if (packet->stream_index == video_index_) {
+            ret = avcodec_send_packet(video_context_, packet);
+            if (ret == AVERROR(EAGAIN) || ret == AVERROR_EOF) {
+                break;
+            }
+
+            if (ret < 0) {
+                break;
+            }
+
+            AVFrame* frame = av_frame_alloc();
+            while (ret == 0) {
+                ret = avcodec_receive_frame(video_context_, frame);
+                if (ret == AVERROR(EAGAIN) || ret == AVERROR_EOF) {
+                    break;
+                }
+
+                if (ret < 0) {
+                    break;
+                }
+
+                if (ret == 0) {
+                    save_gif(frame, packet_index);
+                    packet_index++;
+                }
+                av_frame_unref(frame);
+            }
+            av_frame_free(&frame);
+        }
+        av_packet_unref(packet);
+    }
+    av_packet_free(&packet);
+}
+
+void FFmpegDemuxer::save_pcm_date(const std::string& filename) {
+    open_file(filename);
+    open_decoder_context(avformat_context_, avformat_context_->streams[audio_index_]);
+
+    int ret = -1;
+    AVPacket* packet = av_packet_alloc();
+
+    while (av_read_frame(avformat_context_, packet) >= 0) {
+        if (packet->stream_index == audio_index_) {
+            ret = avcodec_send_packet(audio_context_, packet);
+            if (ret == AVERROR(EAGAIN) || ret == AVERROR_EOF) {
+                break;
+            }
+
+            if (ret < 0) {
+                break;
+            }
+
+            AVFrame* frame = av_frame_alloc();
+            while (ret == 0) {
+                ret = avcodec_receive_frame(audio_context_, frame);
+                if (ret == AVERROR(EAGAIN) || ret == AVERROR_EOF) {
+                    break;
+                }
+
+                if (ret < 0) {
+                    break;
+                }
+
+                if (ret == 0) {
+                    save_pcm(frame);
+                }
+                av_frame_unref(frame);
+            }
+            if (frame) {
+                av_frame_free(&frame);
+            }
+        }
+        av_packet_unref(packet);
+    }
+
+    if (packet) {
+        av_packet_free(&packet);
+    }
+}
+
 void FFmpegDemuxer::open_file(const std::string& filename) {
     if (filename.empty()) {
         av_log(NULL, AV_LOG_ERROR, "demuxer filename is null\n");
@@ -338,4 +427,207 @@ void FFmpegDemuxer::save_jpeg(const AVFrame* frame, const int& jpeg_index) {
         avcodec_close(jpeg_codec_context);
         avcodec_free_context(&jpeg_codec_context);
     }
+}
+
+void FFmpegDemuxer::save_gif(const AVFrame* frame, const int& gif_index) {
+    if (gif_index % 300 != 0) {
+        return;
+    }
+
+    if (!frame) {
+        av_log(NULL, AV_LOG_ERROR, "save_gif frame is null\n");
+        return;
+    }
+
+    int ret = -1;
+    std::string gif_name = fmt::format("test_gif/road_{}.gif", gif_index);
+
+    // 创建输出文件实例
+    AVFormatContext* out_context = nullptr;
+    ret = avformat_alloc_output_context2(&out_context, NULL, NULL, gif_name.c_str());
+    if (ret < 0) {
+        av_log(NULL, AV_LOG_ERROR, "avformat_alloc_output_context2 failed\n");
+        return;
+    }
+
+    // 打开输出流
+    ret = avio_open(&out_context->pb, gif_name.c_str(), AVIO_FLAG_READ_WRITE);
+    if (ret < 0) {
+        av_log(NULL, AV_LOG_ERROR, "avio_open failed\n");
+        return;
+    }
+
+    // 打开编码器
+    const AVCodec* encoder = avcodec_find_encoder(AV_CODEC_ID_GIF);
+    if (!encoder) {
+        av_log(NULL, AV_LOG_ERROR, "avcodec_find_encoder gif failed\n");
+        return;
+    }
+
+    AVCodecContext* encoder_context = avcodec_alloc_context3(encoder);
+    if (!encoder_context) {
+        av_log(NULL, AV_LOG_ERROR, "avcodec_alloc_context3 failed\n");
+        return;
+    }
+    encoder_context->width = frame->width;
+    encoder_context->height = frame->height;
+    encoder_context->pix_fmt = AV_PIX_FMT_RGB8;
+    encoder_context->time_base = {1, 25};
+
+    ret = avcodec_open2(encoder_context, NULL, NULL);
+    if (ret != 0) {
+        av_log(NULL, AV_LOG_ERROR, "avcodec_open2 failed\n");
+        return;
+    }
+
+    AVStream* video_stream = avformat_new_stream(out_context, NULL);
+    avcodec_parameters_from_context(video_stream->codecpar, encoder_context);
+    video_stream->codecpar->codec_tag = 0;
+
+    avformat_write_header(out_context, NULL);
+
+    // 像素重采样
+    SwsContext* sws_context = sws_getContext(frame->width, frame->height, AV_PIX_FMT_YUV420P, frame->width,
+                                             frame->height, AV_PIX_FMT_BGR8, SWS_FAST_BILINEAR, NULL, NULL, NULL);
+    if (!sws_context) {
+        av_log(NULL, AV_LOG_ERROR, "sws_getContext failed\n");
+        return;
+    }
+
+    AVFrame* sws_frame = av_frame_alloc();
+    sws_frame->width = frame->width;
+    sws_frame->height = frame->height;
+    sws_frame->format = AV_PIX_FMT_BGR8;
+    int byte_size =
+        av_image_alloc(sws_frame->data, sws_frame->linesize, sws_frame->width, sws_frame->height, AV_PIX_FMT_BGR8, 1);
+    if (byte_size < 0) {
+        av_log(NULL, AV_LOG_ERROR, "av_image_alloc failed\n");
+        return;
+    }
+
+    int scale_height =
+        sws_scale(sws_context, frame->data, frame->linesize, 0, frame->height, sws_frame->data, sws_frame->linesize);
+    if (scale_height <= 0) {
+        av_log(NULL, AV_LOG_ERROR, "sws_scale failed\n");
+        return;
+    }
+    sws_frame->pts = frame->pts;
+
+    if (sws_context) {
+        sws_freeContext(sws_context);
+    }
+
+    // 生成文件数据
+    AVPacket* packet = av_packet_alloc();
+    while (avcodec_send_frame(encoder_context, sws_frame) >= 0) {
+        ret = avcodec_receive_packet(encoder_context, packet);
+        packet->stream_index = 0;
+
+        if (ret == AVERROR(EAGAIN) || ret == AVERROR_EOF) {
+            break;
+        }
+
+        if (ret < 0) {
+            break;
+        }
+
+        if (ret == 0) {
+            // 转换原始时间戳为gif时间戳
+            av_packet_rescale_ts(packet, frame->time_base, sws_frame->time_base);
+            if (packet->time_base.num == 0) {
+                packet->time_base = {1, 25};
+            }
+            packet->pts = frame->pts;
+            av_write_frame(out_context, packet);
+        }
+        av_packet_unref(packet);
+        av_frame_unref(sws_frame);
+    }
+    av_write_trailer(out_context);
+
+    // 关闭输出流
+    avio_close(out_context->pb);
+
+    if (sws_frame) {
+        av_frame_free(&sws_frame);
+    }
+
+    if (packet) {
+        av_packet_free(&packet);
+    }
+
+    if (out_context) {
+        avformat_free_context(out_context);
+    }
+
+    if (encoder_context) {
+        avcodec_close(encoder_context);
+        avcodec_free_context(&encoder_context);
+    }
+}
+
+void FFmpegDemuxer::save_pcm(const AVFrame* frame) {
+    std::string pcm_name = "out.pcm";
+
+    int ret = -1;
+
+    // 对音频重采样
+    SwrContext* swr_context = swr_alloc();
+    swr_context = swr_alloc_set_opts(swr_context, av_get_default_channel_layout(2), AV_SAMPLE_FMT_S16, 44100,
+                                     frame->channel_layout, (AVSampleFormat)frame->format, frame->sample_rate, 0, NULL);
+    if (!swr_context) {
+        av_log(NULL, AV_LOG_ERROR, "swr_alloc_set_opts failed\n");
+        return;
+    }
+
+    ret = swr_init(swr_context);
+    if (ret < 0) {
+        av_log(NULL, AV_LOG_ERROR, "swr_init failed\n");
+        return;
+    }
+
+    AVFrame* swr_frame = av_frame_alloc();
+    swr_frame->nb_samples = frame->nb_samples;
+    swr_frame->format = AV_SAMPLE_FMT_S16;
+    swr_frame->ch_layout = frame->ch_layout;
+    ret = av_frame_get_buffer(swr_frame, 0);
+    if (ret != 0) {
+        av_log(NULL, AV_LOG_ERROR, "av_frame_get_buffer failed\n");
+        return;
+    }
+
+    ret = swr_convert(swr_context, swr_frame->data, 1024, (const uint8_t**)frame->data, frame->nb_samples);
+    if (ret < 0) {
+        av_log(NULL, AV_LOG_ERROR, "swr_convert failed\n");
+        return;
+    }
+
+    if (swr_context) {
+        swr_free(&swr_context);
+    }
+
+    std::ofstream ofs(pcm_name, std::ios::out | std::ios::binary | std::ios::app);
+    if (ofs.is_open()) {
+        // 检查采样格式是否是交错的
+        if (av_sample_fmt_is_planar((AVSampleFormat)swr_frame->format)) {
+            for (int i = 0; i < swr_frame->nb_samples; i++) {
+                // 根据采样格式计算字节数
+                int size = av_get_bytes_per_sample((AVSampleFormat)swr_frame->format);
+                int chennel = 0;
+                while (chennel < swr_frame->ch_layout.nb_channels) {
+                    ofs.write((const char*)(swr_frame->data[chennel] + size * i), size);
+                    chennel++;
+                }
+            }
+        } else {
+            ofs.write((const char*)swr_frame->extended_data[0], swr_frame->linesize[0]);
+        }
+    }
+
+    if (swr_frame) {
+        av_frame_free(&swr_frame);
+    }
+
+    ofs.flush();
+    ofs.close();
 }
