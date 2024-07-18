@@ -12,7 +12,8 @@
     "glad",
     "stb",
     "glm",
-    "sdl2"
+    "sdl2",
+    "rtaudio"
   ],
   "overrides": []
 }
